@@ -1,6 +1,6 @@
 // 推移。今年と前年の月別の値を折れ線で比べる。
 import { db } from '../db.js';
-import { canonicalName, getSettings, monthIndex, UNIT_LABEL, yearLabel, yearOf } from '../domain.js';
+import { canonicalName, CATEGORIES, CATEGORY_LABEL, getSettings, monthIndex, UNIT_LABEL, yearLabel, yearOf } from '../domain.js';
 import { go, topbar } from '../router.js';
 import { currentYearMonth, h, svg, yen } from '../util.js';
 
@@ -29,15 +29,16 @@ function itemMetrics(slips, aliases) {
   for (const s of slips) {
     for (const i of s.items) {
       const name = canonicalName(i.name, aliases);
-      if (!isCumulative(name) && !found.has(name)) found.set(name, i.unit);
+      if (!isCumulative(name) && !found.has(name)) found.set(name, i);
     }
   }
   return [...found.entries()]
     .sort((a, b) => a[0].localeCompare(b[0], 'ja'))
-    .map(([name, unit]) => ({
+    .map(([name, { unit, category }]) => ({
       id: `item:${name}`,
       label: name,
       unit,
+      category,
       balance: isBalance(name),
       get: (s) => {
         const hits = s.items.filter((i) => canonicalName(i.name, aliases) === name && typeof i.value === 'number');
@@ -191,7 +192,11 @@ export async function renderTrends() {
       ),
       metric && h('label', {}, '表示する項目',
         h('select', { onChange: (e) => update({ metric: e.target.value }) },
-          metrics.map((m) => h('option', { value: m.id, selected: m.id === metric.id }, m.label)))),
+          [{ label: '合計', items: metrics.filter((m) => !m.category) },
+            ...CATEGORIES.map((c) => ({ label: CATEGORY_LABEL[c], items: metrics.filter((m) => m.category === c) }))]
+            .filter((group) => group.items.length)
+            .map((group) => h('optgroup', { label: group.label },
+              group.items.map((m) => h('option', { value: m.id, selected: m.id === metric.id }, m.label)))))),
       h('div', { class: 'chips', role: 'group', 'aria-label': '明細の種別' },
         KINDS.map((k) => h('button', { class: 'chip', type: 'button', 'aria-pressed': String(view.kind === k.id), onClick: () => update({ kind: k.id }) }, k.label))),
       hasCurrent || hasPrev
