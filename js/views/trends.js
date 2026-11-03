@@ -21,12 +21,15 @@ let view = { metric: 'net', kind: 'salary', year: null };
 // 有給残数のような残高の項目。足し合わせても意味がないので合計を出さない(残業は含まない)
 const isBalance = (name) => /(有給|有休|年休|休暇|代休).*残|残(数|日数|高|時間|り)|残$/.test(name);
 
+// 課税対象額累計のような累計の項目。右肩上がりになるだけなので推移には出さない
+const isCumulative = (name) => /累計|累積|累算|年初来/.test(name);
+
 function itemMetrics(slips, aliases) {
   const found = new Map();
   for (const s of slips) {
     for (const i of s.items) {
       const name = canonicalName(i.name, aliases);
-      if (!found.has(name)) found.set(name, i.unit);
+      if (!isCumulative(name) && !found.has(name)) found.set(name, i.unit);
     }
   }
   return [...found.entries()]
