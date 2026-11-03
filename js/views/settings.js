@@ -4,7 +4,8 @@ import { db } from '../db.js';
 import { getSettings } from '../domain.js';
 import { clearPasscode, hasPasscode, setPasscode } from '../lock.js';
 import { go, topbar } from '../router.js';
-import { confirmDialog, h, shareOrDownload, toast } from '../util.js';
+import { confirmDialog, h, monthLabel, shareOrDownload, toast } from '../util.js';
+import { RELEASE_DATE, VERSION } from '../version.js';
 
 function apiKeySection(saved) {
   const status = h('p', { class: 'setting-note', role: 'status' }, saved ? 'キーは設定済みです。' : 'キーは未設定です。');
@@ -173,6 +174,11 @@ function aliasSection(slips, aliases) {
   );
 }
 
+function versionLine() {
+  const { year, month } = monthLabel(RELEASE_DATE.slice(0, 7));
+  return h('p', { class: 'app-version' }, `バージョン ${VERSION} ・ ${year}年${month}月${Number(RELEASE_DATE.slice(8))}日`);
+}
+
 export async function renderSettings() {
   const [apiKey, { startMonth, aliases }, passcode, lastBackupAt, slips] = await Promise.all([
     db.settings.get('apiKey'),
@@ -189,6 +195,7 @@ export async function renderSettings() {
       yearSection(startMonth),
       aliasSection(slips, aliases),
       passcodeSection(passcode),
+      versionLine(),
     ),
   );
 }

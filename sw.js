@@ -18,6 +18,7 @@ const ASSETS = [
   'js/router.js',
   'js/scan.js',
   'js/util.js',
+  'js/version.js',
   'js/views/add.js',
   'js/views/detail.js',
   'js/views/form.js',

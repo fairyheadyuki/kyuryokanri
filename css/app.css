@@ -264,6 +264,7 @@ label > input, label > select, label > textarea { margin-top: 4px; color: var(--
 
 /* 設定 */
 .setting-note { font-size: 13px; color: var(--muted); }
+.app-version { font-size: 12px; color: var(--muted); text-align: center; }
 .alias-row { display: flex; align-items: center; gap: 8px; }
 .alias-row span { flex: 1; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
 .alias-row input { flex: 1; min-width: 0; }
