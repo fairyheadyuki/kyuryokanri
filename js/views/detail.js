@@ -25,7 +25,7 @@ export async function renderDetail({ id }, ctx) {
   };
   const deltaNode = (now, before, unit = 'yen') => {
     if (typeof now !== 'number' || typeof before !== 'number' || now === before) return null;
-    return h('span', { class: 'delta' }, `${signedYen(now - before)}${unit === 'yen' ? '円' : UNIT_LABEL[unit]}`);
+    return h('span', { class: now > before ? 'delta up' : 'delta down' }, `${signedYen(now - before)}${unit === 'yen' ? '円' : UNIT_LABEL[unit]}`);
   };
 
   const imageNode = [];
@@ -67,7 +67,6 @@ export async function renderDetail({ id }, ctx) {
           h('span', { class: 'value' }, `${yen(slip.gross)}円`, deltaNode(slip.gross, prev?.gross))),
         h('div', { class: 'kv' }, h('span', {}, '控除合計'),
           h('span', { class: 'value' }, `${yen(slip.deductionTotal)}円`, deltaNode(slip.deductionTotal, prev?.deductionTotal))),
-        prev && h('p', { class: 'small muted' }, `増減は ${monthLabel(prev.yearMonth).year}年${monthLabel(prev.yearMonth).month}月分との比較です。`),
       ),
       CATEGORIES.map((category) => {
         const items = slip.items.filter((i) => i.category === category);

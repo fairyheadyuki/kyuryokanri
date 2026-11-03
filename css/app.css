@@ -15,6 +15,10 @@
   --warn-bg: #fdf3dc;
   --warn-ink: #6b4a00;
   --mask-ring: #eb6834;
+  --up-bg: #fcebeb;
+  --up-ink: #a32d2d;
+  --down-bg: #e6f1fb;
+  --down-ink: #185fa5;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -31,6 +35,10 @@
     --series-2: #d95926;
     --warn-bg: #3a2c0c;
     --warn-ink: #f6d58a;
+    --up-bg: #501313;
+    --up-ink: #f7c1c1;
+    --down-bg: #0c447c;
+    --down-ink: #e6f1fb;
   }
 }
 
@@ -58,6 +66,9 @@ input, select, textarea {
   border-radius: 8px;
 }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+/* iOS の日付欄は既定の幅を持ち、親の幅を超えてはみ出すので抑える */
+input[type="date"], input[type="month"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; }
+input::-webkit-date-and-time-value { text-align: left; }
 label { display: block; font-size: 13px; color: var(--ink-2); }
 label > input, label > select, label > textarea { margin-top: 4px; color: var(--ink); }
 
@@ -169,7 +180,9 @@ label > input, label > select, label > textarea { margin-top: 4px; color: var(--
 .kv { display: flex; align-items: baseline; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); }
 .kv:first-of-type { border-top: 0; }
 .kv .value { margin-left: auto; text-align: right; font-variant-numeric: tabular-nums; }
-.kv .delta { display: block; font-size: 12px; color: var(--muted); }
+.kv .delta { display: block; width: fit-content; margin: 3px 0 0 auto; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.kv .delta.up { background: var(--up-bg); color: var(--up-ink); }
+.kv .delta.down { background: var(--down-bg); color: var(--down-ink); }
 .kv.total { font-weight: 600; }
 .slip-image { display: block; width: 100%; border-radius: 8px; border: 1px solid var(--line); }
 

@@ -4,7 +4,7 @@ import { canonicalName, getSettings, monthIndex, UNIT_LABEL, yearLabel, yearOf }
 import { go, topbar } from '../router.js';
 import { currentYearMonth, h, svg, yen } from '../util.js';
 
-const CHART = { w: 360, h: 220, left: 40, right: 12, top: 12, bottom: 24 };
+const CHART = { w: 360, h: 220, left: 52, right: 12, top: 12, bottom: 24 };
 const BASE_METRICS = [
   { id: 'net', label: '手取り', unit: 'yen', get: (s) => s.net },
   { id: 'gross', label: '総支給額', unit: 'yen', get: (s) => s.gross },
@@ -17,6 +17,9 @@ const KINDS = [
 ];
 
 let view = { metric: 'net', kind: 'salary', year: null };
+
+// 有給残数のような残高の項目。足し合わせても意味がないので合計を出さない(残業は含まない)
+const isBalance = (name) => /(有給|有休|年休|休暇|代休).*残|残(数|日数|高|時間|り)|残$/.test(name);
 
 function itemMetrics(slips, aliases) {
   const found = new Map();
@@ -32,6 +35,7 @@ function itemMetrics(slips, aliases) {
       id: `item:${name}`,
       label: name,
       unit,
+      balance: isBalance(name),
       get: (s) => {
         const hits = s.items.filter((i) => canonicalName(i.name, aliases) === name && typeof i.value === 'number');
         return hits.length ? hits.reduce((acc, i) => acc + i.value, 0) : null;
@@ -46,7 +50,7 @@ function monthlySeries(slips, metric, year, startMonth) {
     const v = metric.get(s);
     if (typeof v !== 'number') continue;
     const i = monthIndex(Number(s.yearMonth.slice(5, 7)), startMonth);
-    values[i] = (values[i] || 0) + v;
+    values[i] = metric.balance ? v : (values[i] || 0) + v;
   }
   return values;
 }
@@ -64,12 +68,13 @@ function niceTicks(min, max) {
 }
 
 function formatTick(v, unit) {
-  if (unit !== 'yen') return v.toLocaleString('ja-JP');
-  if (Math.abs(v) >= 10000) return `${(v / 10000).toLocaleString('ja-JP', { maximumFractionDigits: 1 })}万`;
-  return v.toLocaleString('ja-JP');
+  if (unit !== 'yen') return `${v.toLocaleString('ja-JP')}${UNIT_LABEL[unit]}`;
+  if (Math.abs(v) >= 10000) return `${(v / 10000).toLocaleString('ja-JP', { maximumFractionDigits: 1 })}万円`;
+  return `${v.toLocaleString('ja-JP')}円`;
 }
 
 const formatValue = (v, unit) => (v === null ? '―' : unit === 'yen' ? `${yen(v)}円` : `${v.toLocaleString('ja-JP')}${UNIT_LABEL[unit]}`);
+const formatDiff = (v, unit) => `${v.toLocaleString('ja-JP', { signDisplay: 'always' })}${UNIT_LABEL[unit]}`;
 
 function linePath(values, x, y) {
   // 明細のない月は線をつながない
@@ -145,13 +150,18 @@ function buildChart(current, previous, months, unit, labels) {
 
 export async function renderTrends() {
   const [slips, { startMonth, aliases }] = await Promise.all([db.payslips.all(), getSettings()]);
-  const metrics = [...BASE_METRICS, ...itemMetrics(slips, aliases)];
-  const metric = metrics.find((m) => m.id === view.metric) || metrics[0];
   const thisYear = yearOf(currentYearMonth(), startMonth);
   const years = [...new Set([thisYear, ...slips.map((s) => yearOf(s.yearMonth, startMonth))])].sort((a, b) => a - b);
   if (!years.includes(view.year)) view.year = slips.length ? Math.max(...slips.map((s) => yearOf(s.yearMonth, startMonth))) : thisYear;
   const year = view.year;
   const index = years.indexOf(year);
+
+  // 表示中の年と前年、選択中の種別に値がある項目だけを選択肢にする
+  const filtered = slips.filter((s) => view.kind === 'all' || s.kind === view.kind);
+  const shown = filtered.filter((s) => [year, year - 1].includes(yearOf(s.yearMonth, startMonth)));
+  const metrics = [...BASE_METRICS, ...itemMetrics(shown, aliases)]
+    .filter((m) => shown.some((s) => { const v = m.get(s); return typeof v === 'number' && v !== 0; }));
+  const metric = metrics.find((m) => m.id === view.metric) || metrics[0] || null;
 
   const update = (patch) => { view = { ...view, ...patch }; go('trends'); };
 
@@ -160,9 +170,8 @@ export async function renderTrends() {
     return h('div', {}, header, h('div', { class: 'page' }, h('p', { class: 'empty muted' }, '明細を追加すると、ここに推移が表示されます。')));
   }
 
-  const filtered = slips.filter((s) => view.kind === 'all' || s.kind === view.kind);
-  const current = monthlySeries(filtered, metric, year, startMonth);
-  const previous = monthlySeries(filtered, metric, year - 1, startMonth);
+  const current = metric ? monthlySeries(filtered, metric, year, startMonth) : Array(12).fill(null);
+  const previous = metric ? monthlySeries(filtered, metric, year - 1, startMonth) : Array(12).fill(null);
   const months = Array.from({ length: 12 }, (_, i) => ((startMonth - 1 + i) % 12) + 1);
   const labels = { current: yearLabel(year, startMonth), previous: yearLabel(year - 1, startMonth) };
   const hasCurrent = current.some((v) => v !== null);
@@ -177,7 +186,7 @@ export async function renderTrends() {
         h('strong', {}, labels.current),
         h('button', { class: 'btn btn-ghost btn-icon', type: 'button', 'aria-label': '次の年', disabled: index === years.length - 1, onClick: () => update({ year: years[index + 1] }) }, '›'),
       ),
-      h('label', {}, '表示する項目',
+      metric && h('label', {}, '表示する項目',
         h('select', { onChange: (e) => update({ metric: e.target.value }) },
           metrics.map((m) => h('option', { value: m.id, selected: m.id === metric.id }, m.label)))),
       h('div', { class: 'chips', role: 'group', 'aria-label': '明細の種別' },
@@ -205,19 +214,18 @@ export async function renderTrends() {
                 const both = current[i] !== null && previous[i] !== null;
                 return h('tr', {},
                   h('th', { scope: 'row' }, `${m}月`),
-                  h('td', {}, current[i] === null ? '―' : current[i].toLocaleString('ja-JP')),
-                  hasPrev && h('td', {}, previous[i] === null ? '―' : previous[i].toLocaleString('ja-JP')),
-                  hasPrev && h('td', {}, both ? (current[i] - previous[i]).toLocaleString('ja-JP', { signDisplay: 'always' }) : '―'),
+                  h('td', {}, formatValue(current[i], metric.unit)),
+                  hasPrev && h('td', {}, formatValue(previous[i], metric.unit)),
+                  hasPrev && h('td', {}, both ? formatDiff(current[i] - previous[i], metric.unit) : '―'),
                 );
               })),
-              h('tfoot', {}, h('tr', {},
+              !metric.balance && h('tfoot', {}, h('tr', {},
                 h('th', { scope: 'row' }, '合計'),
-                h('td', {}, sum(current).toLocaleString('ja-JP')),
-                hasPrev && h('td', {}, sum(previous).toLocaleString('ja-JP')),
+                h('td', {}, formatValue(sum(current), metric.unit)),
+                hasPrev && h('td', {}, formatValue(sum(previous), metric.unit)),
                 hasPrev && h('td', {}, ''),
               )),
             ),
-            h('p', { class: 'small muted' }, `単位: ${UNIT_LABEL[metric.unit]}`),
           ),
         ]
         : h('p', { class: 'empty muted' }, 'この条件の明細はありません。'),

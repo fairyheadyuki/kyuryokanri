@@ -60,7 +60,7 @@ export async function renderList() {
             s.kind !== 'salary' && h('span', { class: 'badge' }, KIND_LABEL[s.kind]),
             h('span', { class: 'month-values num' },
               h('span', { class: 'month-net' }, `${yen(s.net)}円`),
-              h('span', { class: 'small muted', 'aria-label': '総支給' }, ` / ${yen(s.gross)}`),
+              h('span', { class: 'small muted', 'aria-label': '総支給' }, ` / ${yen(s.gross)}円`),
             ),
           );
         })),
