@@ -19,6 +19,8 @@
   --up-ink: #a32d2d;
   --down-bg: #e6f1fb;
   --down-ink: #185fa5;
+  --up-text: #c62828;
+  --down-text: #1565c0;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -39,6 +41,8 @@
     --up-ink: #f7c1c1;
     --down-bg: #0c447c;
     --down-ink: #e6f1fb;
+    --up-text: #f28b82;
+    --down-text: #7fb3f0;
   }
 }
 
@@ -261,6 +265,9 @@ label > input, label > select, label > textarea { margin-top: 4px; color: var(--
 .table thead th { border-top: 0; color: var(--muted); font-size: 12px; }
 .table th:first-child { text-align: left; }
 .table tfoot th, .table tfoot td { font-weight: 600; }
+.table td.cur { font-weight: 600; }
+.table td.diff.up { color: var(--up-text); }
+.table td.diff.down { color: var(--down-text); }
 
 /* 設定 */
 .setting-note { font-size: 13px; color: var(--muted); }

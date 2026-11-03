@@ -78,7 +78,7 @@ function formatTick(v, unit) {
 }
 
 const formatValue = (v, unit) => (v === null ? '―' : unit === 'yen' ? `${yen(v)}円` : `${v.toLocaleString('ja-JP')}${UNIT_LABEL[unit]}`);
-const formatDiff = (v, unit) => `${v.toLocaleString('ja-JP', { signDisplay: 'always' })}${UNIT_LABEL[unit]}`;
+const formatDiff = (v, unit) => `${v.toLocaleString('ja-JP', { signDisplay: 'exceptZero' })}${UNIT_LABEL[unit]}`;
 
 function linePath(values, x, y) {
   // 明細のない月は線をつながない
@@ -220,11 +220,12 @@ export async function renderTrends() {
               h('tbody', {}, months.map((m, i) => {
                 if (current[i] === null && previous[i] === null) return null;
                 const both = current[i] !== null && previous[i] !== null;
+                const diff = both ? current[i] - previous[i] : 0;
                 return h('tr', {},
                   h('th', { scope: 'row' }, `${m}月`),
-                  h('td', {}, formatValue(current[i], metric.unit)),
+                  h('td', { class: 'cur' }, formatValue(current[i], metric.unit)),
                   hasPrev && h('td', {}, formatValue(previous[i], metric.unit)),
-                  hasPrev && h('td', {}, both ? formatDiff(current[i] - previous[i], metric.unit) : '―'),
+                  hasPrev && h('td', { class: diff > 0 ? 'diff up' : diff < 0 ? 'diff down' : 'diff' }, both ? formatDiff(diff, metric.unit) : '―'),
                 );
               })),
               !metric.balance && h('tfoot', {}, h('tr', {},
